@@ -1,0 +1,10 @@
+## Interface: 11302
+
+## Title: AdiBags-PummlerCharges
+## Author: Abub
+## Version: v1.0
+## X-Date: 2019-12-23T4:56:14Z
+
+## Dependencies: AdiBags
+
+AdiBags-PummlerCharges.lua
