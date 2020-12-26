@@ -25,60 +25,55 @@ end
 
 function mod:GetOptions() end
 
--- code from https://wago.io/TMiK1zsb9
 local function GetCharges(bag, slot)
 
-    if not MCPTooltip then
-        CreateFrame("GameTooltip", "MCPTooltip", nil, "GameTooltipTemplate")
-        MCPTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    end
+    local text, charges
 
-    if bag == "player" and slot == 16 then
-        MCPTooltip:SetInventoryItem(bag, slot)
-    else
-        MCPTooltip:SetBagItem(bag, slot)
-    end
+    -- read lines 11 to 13 (can move because of enchants/attachments)
+    for textLines = 11, 13 do
 
-    local charges = nil
-    local text, text2, text3
+        local textLine = "MCPTooltipTextLeft" .. textLines
 
-    if getglobal("MCPTooltipTextLeft11") then
-        text = getglobal("MCPTooltipTextLeft11"):GetText()
-    end
+        if getglobal(textLine) then
 
-    if getglobal("MCPTooltipTextLeft12") then
-        text2 = getglobal("MCPTooltipTextLeft12"):GetText()
-    end
+            text = getglobal(textLine):GetText()
 
-    -- print('text', text)
-    -- print('text2', text2)
+            if text then
+                if text:find("耗尽") then
+                    charges = 0
+                elseif text:find("次") then
+                    charges = text:gsub("次", "")
+                elseif text:find("Charge") then
+                    charges = strsplit(" ", text, 2)
+                end
 
-    if text then
-        if string.find(text, "耗尽") then
-            charges = 0
-        elseif string.find(text, "次") then
-            charges = text:gsub("次", "")
-        elseif string.find(text, "Charge") then
-            charges, _ = strsplit(" ", text, 2)
-            -- print(charges)
+                if charges then
+                    charges = tonumber(charges)
+                    return charges
+                end
+            end
+
         end
     end
 
-    if text2 then
-        if string.find(text2, "耗尽") then
-            charges = 0
-        elseif string.find(text2, "次") then
-            charges = text2:gsub("次", "")
-        elseif string.find(text2, "Charge") then
-            charges, _ = strsplit(" ", text2, 2)
-            -- print(charges)
-        end
-    end
-
-    if not charges then charges = 0 end
-
-    charges = tonumber(charges)
     return charges
+
+end
+
+local function HasAttachment()
+    local text, attachment
+
+    for textLines = 8, 9 do
+
+        local textLine = "MCPTooltipTextLeft" .. textLines
+
+        if getglobal(textLine) then
+
+            text = getglobal(textLine):GetText()
+
+            if text then if text:find("Undead") then return true end end
+        end
+    end
 
 end
 
@@ -121,6 +116,28 @@ local function UpdateEnchantedOverlay(button, link)
 
 end
 
+local function UpdateAttachedOverlay(button, link)
+
+    local textAttachedOverlay = button.PummlerAttachedOverlay
+    local attachment = HasAttachment()
+
+    if not textAttachedOverlay and attachment then
+        textAttachedOverlay = button:CreateFontString(f, "OVERLAY",
+                                                      "GameTooltipText")
+        textAttachedOverlay:SetPoint("TOPLEFT", 1, -2)
+        local fontName = textAttachedOverlay:GetFont()
+        textAttachedOverlay:SetFont(fontName, 28, "OUTLINE")
+        textAttachedOverlay:SetText("*")
+        textAttachedOverlay:SetTextColor(1, 1, 0)
+        button.PummlerAttachedOverlay = textAttachedOverlay
+    elseif textAttachedOverlay ~= nil and attachment then
+        textAttachedOverlay:Show()
+    elseif textAttachedOverlay ~= nil and attachment then
+        textAttachedOverlay:Hide()
+    end
+
+end
+
 local function UpdateChargesOverlay(button, link)
 
     local textOverlay = button.PummlerChargesOverlay
@@ -132,13 +149,12 @@ local function UpdateChargesOverlay(button, link)
         local fontName = textOverlay:GetFont()
         textOverlay:SetFont(fontName, 18, "OUTLINE")
         button.PummlerChargesOverlay = textOverlay
-    else
-        textOverlay:Show()
     end
 
     textOverlay:SetText(charges)
     local red, green, blue = GetChargesColor(charges)
     textOverlay:SetTextColor(red, green, blue)
+    textOverlay:Show()
 
 end
 
@@ -146,13 +162,24 @@ function mod:UpdateButton(event, button)
 
     if enabled then
         local link = button:GetItemLink()
+
         if link then
 
             local itemName = GetItemInfo(link)
             if itemName == 'Manual Crowd Pummeler' then
 
+                -- prep tooltip for parsing
+                if not MCPTooltip then
+                    CreateFrame("GameTooltip", "MCPTooltip", nil,
+                                "GameTooltipTemplate")
+                    MCPTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+                end
+
+                MCPTooltip:SetBagItem(button.bag, button.slot)
+
                 UpdateChargesOverlay(button, link)
                 UpdateEnchantedOverlay(button, link)
+                UpdateAttachedOverlay(button, link)
 
                 return
             end
@@ -163,6 +190,9 @@ function mod:UpdateButton(event, button)
     if button.PummlerChargesOverlay then button.PummlerChargesOverlay:Hide() end
     if button.PummlerEnchantedOverlay then
         button.PummlerEnchantedOverlay:Hide()
+    end
+    if button.PummlerAttachedOverlay then
+        button.PummlerAttachedOverlay:Hide()
     end
 end
 
