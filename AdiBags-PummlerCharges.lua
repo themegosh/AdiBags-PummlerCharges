@@ -71,7 +71,11 @@ local function HasAttachment()
 
             text = getglobal(textLine):GetText()
 
-            if text then if text:find("Undead") then return true end end
+            if text then
+                if text:find("Undead") or text:find("Weighted") then
+                    return true
+                end
+            end
         end
     end
 
@@ -132,7 +136,7 @@ local function UpdateAttachedOverlay(button, link)
         button.PummlerAttachedOverlay = textAttachedOverlay
     elseif textAttachedOverlay ~= nil and attachment then
         textAttachedOverlay:Show()
-    elseif textAttachedOverlay ~= nil and attachment then
+    elseif textAttachedOverlay ~= nil and not attachment then
         textAttachedOverlay:Hide()
     end
 
