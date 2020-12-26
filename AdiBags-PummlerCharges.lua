@@ -4,8 +4,9 @@ local addon = LibStub('AceAddon-3.0'):GetAddon('AdiBags')
 local L = setmetatable({}, {__index = addon.L})
 
 local mod = addon:NewModule("AdiPummlerCharges", 'ABEvent-1.0')
-mod.uiName = L['Pummler Charges Overlay']
-mod.uiDesc = L['Adds a Charges Count overlay to Manual Crowd Pummlers']
+mod.uiName = L['Manual Crowd Pummler Overlay']
+mod.uiDesc =
+    L['Adds a # of Charges overlay to Manual Crowd Pummlers and a * to indicate if they\'re enchanted with an Iron Counterweight.']
 
 local enabled = false
 
@@ -39,8 +40,7 @@ local function GetCharges(bag, slot)
     end
 
     local charges = nil
-    local text
-    local text2
+    local text, text2, text3
 
     if getglobal("MCPTooltipTextLeft11") then
         text = getglobal("MCPTooltipTextLeft11"):GetText()
@@ -49,6 +49,9 @@ local function GetCharges(bag, slot)
     if getglobal("MCPTooltipTextLeft12") then
         text2 = getglobal("MCPTooltipTextLeft12"):GetText()
     end
+
+    -- print('text', text)
+    -- print('text2', text2)
 
     if text then
         if string.find(text, "耗尽") then
@@ -79,27 +82,87 @@ local function GetCharges(bag, slot)
 
 end
 
-function mod:UpdateButton(event, button)
+-- returns Red, Green, Blue
+local function GetChargesColor(charges)
+
+    if charges == 3 then
+        return 0, 1, 0 -- green
+    elseif charges == 2 then
+        return 1, 0.6, 0 -- orange
+    elseif charges == 1 then
+        return 0.9, 0, 0 -- red
+    else
+        return 0.7, 0.7, 0.7 -- grey
+    end
+
+end
+
+local function UpdateEnchantedOverlay(button, link)
+
+    local textEnchantedOverlay = button.PummlerEnchantedOverlay
+    local _, _, _, _, _, Enchant = link:find(
+                                       "|?c?f?f?(%x*)|?H?([^:]*):?(%d+):?(%d*):?(%d*):?(%d*):?(%d*):?(%d*):?(%-?%d*):?(%-?%d*):?(%d*):?(%d*)|?h?%[?([^%[%]]*)%]?|?h?|?r?")
+
+    -- iron counterweight is id 34
+    if not textEnchantedOverlay and Enchant == "34" then
+        textEnchantedOverlay = button:CreateFontString(f, "OVERLAY",
+                                                       "GameTooltipText")
+        textEnchantedOverlay:SetPoint("TOPRIGHT", 1, -2)
+        local fontName = textEnchantedOverlay:GetFont()
+        textEnchantedOverlay:SetFont(fontName, 28, "OUTLINE")
+        textEnchantedOverlay:SetText("*")
+        textEnchantedOverlay:SetTextColor(1, 0, 1) -- purple
+        button.PummlerEnchantedOverlay = textEnchantedOverlay
+    elseif textEnchantedOverlay ~= nil and Enchant == "34" then
+        textEnchantedOverlay:Show()
+    elseif textEnchantedOverlay ~= nil and Enchant ~= "34" then
+        textEnchantedOverlay:Hide()
+    end
+
+end
+
+local function UpdateChargesOverlay(button, link)
+
     local textOverlay = button.PummlerChargesOverlay
+    local charges = GetCharges(button.bag, button.slot)
+
+    if not textOverlay then
+        textOverlay = button:CreateFontString(f, "OVERLAY", "GameTooltipText")
+        textOverlay:SetPoint("CENTER", 0, 0)
+        local fontName = textOverlay:GetFont()
+        textOverlay:SetFont(fontName, 18, "OUTLINE")
+        button.PummlerChargesOverlay = textOverlay
+    else
+        textOverlay:Show()
+    end
+
+    textOverlay:SetText(charges)
+    local red, green, blue = GetChargesColor(charges)
+    textOverlay:SetTextColor(red, green, blue)
+
+end
+
+function mod:UpdateButton(event, button)
+
     if enabled then
         local link = button:GetItemLink()
         if link then
+
             local itemName = GetItemInfo(link)
             if itemName == 'Manual Crowd Pummeler' then
-                local charges = GetCharges(button.bag, button.slot)
-                if not textOverlay then
-                    textOverlay = button:CreateFontString(f, "OVERLAY",
-                                                          "GameTooltipText")
-                    textOverlay:SetPoint("CENTER", 0, 0)
-                    local fontName = textOverlay:GetFont()
-                    textOverlay:SetFont(fontName, 18, "OUTLINE")
-                end
-                textOverlay:SetText(charges)
-                return true
+
+                UpdateChargesOverlay(button, link)
+                UpdateEnchantedOverlay(button, link)
+
+                return
             end
         end
     end
 
-    if textOverlay then texture:Hide() end
+    -- clean up non-pummler overlays (moving items around the bags)
+    if button.PummlerChargesOverlay then button.PummlerChargesOverlay:Hide() end
+    if button.PummlerEnchantedOverlay then
+        button.PummlerEnchantedOverlay:Hide()
+    end
 end
 
