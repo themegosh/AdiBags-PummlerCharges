@@ -45,6 +45,8 @@ local function GetCharges(bag, slot)
                     charges = text:gsub("次", "")
                 elseif text:find("Charge") then
                     charges = strsplit(" ", text, 2)
+                elseif text:find("Aufladung") then	
+					charges = strsplit(" ", text, 2)
                 end
 
                 if charges then
@@ -169,9 +171,10 @@ function mod:UpdateButton(event, button)
 
         if link then
 
-            local itemName = GetItemInfo(link)
-            if itemName == 'Manual Crowd Pummeler' then
-
+            local itemString = string.match(link, "item:(%d+)")
+			
+            if itemString == "9449" then
+             
                 -- prep tooltip for parsing
                 if not MCPTooltip then
                     CreateFrame("GameTooltip", "MCPTooltip", nil,
